@@ -1,0 +1,82 @@
+package com.jorge.helpdesck.services;
+
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.jorge.helpdesck.domain.Chamado;
+import com.jorge.helpdesck.domain.Cliente;
+import com.jorge.helpdesck.domain.Tecnico;
+import com.jorge.helpdesck.domain.dtos.ChamadoDTO;
+import com.jorge.helpdesck.domain.enums.Prioridade;
+import com.jorge.helpdesck.domain.enums.Status;
+import com.jorge.helpdesck.repositories.ChamadoRepository;
+import com.jorge.helpdesck.services.exceptions.ObjectnotFoundException;
+
+@Service
+public class ChamadoService {
+
+	@Autowired
+	private ChamadoRepository repository;
+	@Autowired
+	private TecnicoService tecnicoService;
+	
+	@Autowired
+	private ClienteService clienteService;
+
+public Chamado findById(Integer id) {
+	Optional<Chamado> obj = repository.findById(id);
+	return obj.orElseThrow(()-> new ObjectnotFoundException("objeto não encontrado "+ id));
+	
+}
+
+public List<Chamado> findAll() {
+	// TODO Auto-generated method stub
+	return repository.findAll();
+}
+
+public Chamado create(@Valid ChamadoDTO objDTO) {
+	// TODO Auto-generated method stub
+	return repository.save(newChamado(objDTO));
+}
+
+
+public Chamado update(Integer id, @Valid ChamadoDTO objDTO) {
+	objDTO.setId(id); // VERIFICAR se tem o id passado na URL
+	Chamado oldObj = findById(id); //Caso o chamado não exista, cria uma exceção
+	oldObj = newChamado(objDTO); // passando as informações atualizadas
+	return repository.save(oldObj); // oldObj recebe as informações atualizadas 
+}
+
+//passando as atualizações para os construtores
+private Chamado newChamado(ChamadoDTO obj) {
+	Tecnico tecnico = tecnicoService.findById(obj.getTecnico());
+	Cliente cliente = clienteService.findById(obj.getCliente());
+	
+	Chamado chamado = new Chamado();
+	if(obj.getId() != null) {  //se já existir algum chamado. ele vai fazer a atualização
+		chamado.setId(obj.getId());
+	}
+	if(obj.getStatus().equals(2)) {               // if para validar o status do chamado se for igual a 2 significa que o chamado foi encerrado e necessita passar a data de fechamento
+		chamado.setDataFechamento(LocalDate.now());
+		
+		
+	}
+	chamado.setTecnico(tecnico);
+	chamado.setCliente(cliente);
+	chamado.setPrioridade(Prioridade.toEnum(obj.getPrioridade()));
+	chamado.setStatus(Status.toEnum(obj.getStatus()));
+	chamado.setTitulo(obj.getTitulo());
+	chamado.setObservacoes(obj.getObservacoes());
+	return chamado;
+	
+}
+
+
+}
